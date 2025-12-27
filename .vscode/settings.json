@@ -1,0 +1,23 @@
+{
+    {
+    "workbench.colorTheme": "Abyss",
+    "editor.aiStats.enabled": true,
+    "window.autoDetectColorScheme": true,
+    "gitlens.ai.model": "vscode",
+    "gitlens.ai.vscode.model": "copilot:gpt-4.1",
+    "chat.mcp.gallery.enabled": true,
+    "workbench.preferredDarkColorTheme": "Darcula Theme from IntelliJ",
+    "workbench.iconTheme": "material-icon-theme"
+    
+  "editor.fontFamily": "JetBrains Mono, monospace",
+  "editor.fontSize": 14,
+  "editor.lineHeight": 1.6,
+  "editor.fontLigatures": true,
+  "editor.cursorSmoothCaretAnimation": "on",
+  "editor.cursorBlinking": "smooth",
+  "editor.renderLineHighlight": "all",
+  "editor.smoothScrolling": true
+
+
+}
+}

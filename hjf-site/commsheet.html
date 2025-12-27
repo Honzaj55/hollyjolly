@@ -1,0 +1,231 @@
+window.addEventListener('DOMContentLoaded', () => {
+    const colordisplay = document.getElementById('colordisplay');
+    const userguess = document.getElementById('userguess');
+    const afterguessresult = document.getElementById('afterguessresult');
+    const copyBtn = document.getElementById('copyguessgrade');
+    const codleNumber = document.getElementById('codleNumber');
+    const hexTitle = document.getElementById('hexTitle');
+    const toggleModeBtn = document.getElementById('toggleMode');
+    const toggleRandomBtn = document.getElementById('toggleRandom');
+
+    const character = document.getElementById("character");
+    const baseEye = document.getElementById("baseEye");
+    const hoverEye = document.getElementById("hoverEye");
+
+    let currentHex = "";
+    let miniHex = "";
+    let dailyStart = new Date(2025,11,27);
+    let miniMode = false;
+    let randomMode = false;
+    let pastCodles = [];
+
+    // ---------- SPRITE FRAMES ----------
+    const idleFrames = ["sprites/idle/idle1.png","sprites/idle/idle2.png","sprites/idle/idle3.png","sprites/idle/idle3.png","sprites/idle/idle4.png"];
+    const blinkFrames = ["sprites/blink/blink1.png","sprites/blink/blink2.png","sprites/blink/blink3.png","sprites/blink/blink4.png","sprites/blink/blink5.png"];
+    const eyeHoverFrames = ["sprites/eyes/eye2.png","sprites/eyes/eye3.png","sprites/eyes/eye4.png","sprites/eyes/eye5.png","sprites/eyes/eye6.png","sprites/eyes/eye7.png","sprites/eyes/eye8.png"];
+    const reactions = {
+        thumb: {frames:Array.from({length:12},(_,i)=>`sprites/reactions/thumb${i+1}.png`), loopStart:8, loopEnd:11},
+        ca2t: {frames:Array.from({length:15},(_,i)=>`sprites/reactions/ca2t${i+1}.png`), loopStart:11, loopEnd:14},
+        cry: {frames:Array.from({length:16},(_,i)=>`sprites/reactions/cry${i+1}.png`), loopStart:11, loopEnd:15}
+    };
+
+    let state="idle", frameIndex=0, animationTimer=null, blinkTimer=null, eyeHoverTimer=null;
+
+    // ---------- COLOR GENERATION ----------
+    function generateDailyHex(){
+        const today = new Date();
+        const seed = Math.floor((today - dailyStart)/(1000*60*60*24));
+        const letters='0123456789ABCDEF';
+        let color='#'; let mini='#';
+        for(let i=0;i<6;i++){
+            color+=letters[(seed+i*37)%16];
+            if(i%2===0) mini+=letters[(seed+i*3)%16];
+            else mini+='0';
+        }
+        codleNumber.textContent=`#${seed}`;
+        currentHex=color.toUpperCase().replace('#','');
+        miniHex=mini.toUpperCase().replace('#','');
+        pastCodles[seed] = currentHex;
+        return miniMode ? mini : color;
+    }
+
+    function generateRandomHex(){
+        let letters='0123456789ABCDEF';
+        let color='#';
+        for(let i=0;i<6;i++) color+=letters[Math.floor(Math.random()*16)];
+        currentHex=color;
+        return color;
+    }
+
+    function setColor(hex){ colordisplay.style.backgroundColor=hex; }
+
+    // ---------- GUESS VALIDATION ----------
+    userguess.addEventListener('input', ()=>{
+        userguess.value=userguess.value.toUpperCase().replace(/[^0-9A-F]/g,'').slice(0,6);
+        // Change input color dynamically
+        if(userguess.value.length>0){
+            let guessColor = '#' + userguess.value.padEnd(6,'0');
+            userguess.style.color = guessColor;
+            userguess.style.borderColor = guessColor;
+        }
+    });
+
+    function gradeGuess(userHex){
+        let guess = userHex.replace('#','').toUpperCase();
+        if(miniMode && guess.length===3) guess = guess[0]+guess[0]+guess[1]+guess[1]+guess[2]+guess[2];
+        if(guess.length!==6) return 0;
+        // Weighted RGB for human eye perception
+        const rC = parseInt(currentHex.substr(0,2),16);
+        const gC = parseInt(currentHex.substr(2,2),16);
+        const bC = parseInt(currentHex.substr(4,2),16);
+        const rG = parseInt(guess.substr(0,2),16);
+        const gG = parseInt(guess.substr(2,2),16);
+        const bG = parseInt(guess.substr(4,2),16);
+        const diff = Math.sqrt(0.299*(rC-rG)**2 + 0.587*(gC-gG)**2 + 0.114*(bC-bG)**2);
+        const maxDist = Math.sqrt(0.299*255*255 + 0.587*255*255 + 0.114*255*255);
+        const score = Math.max(0, Math.round(100 - diff/maxDist*100));
+        return score;
+    }
+
+    function copyGrade(grade){
+        const text=`HollyJollyFollyCodle ${codleNumber.textContent} ${grade}%`;
+        navigator.clipboard.writeText(text);
+    }
+
+    // ---------- SUBMIT GUESS ----------
+    document.getElementById('submitguess').addEventListener('click', ()=>{
+        afterguessresult.textContent=""; 
+        const val=userguess.value.trim();
+        const grade=gradeGuess(val);
+        afterguessresult.textContent=`You scored: ${grade}%`;
+        copyGrade(grade);
+        reactToScore(grade);
+        userguess.value=val.startsWith('#')?val:'#'+val;
+    });
+
+    copyBtn.addEventListener('click', ()=>{
+        const grade=gradeGuess(userguess.value.trim());
+        copyGrade(grade);
+    });
+
+    toggleModeBtn.addEventListener('click', ()=>{
+        miniMode=!miniMode;
+        toggleModeBtn.textContent = miniMode ? "Switch to Full #RRGGBB" : "Switch to Mini #RGB";
+        if(!randomMode) setColor(generateDailyHex());
+        afterguessresult.textContent="";
+    });
+
+    toggleRandomBtn.addEventListener('click', ()=>{
+        randomMode=!randomMode;
+        if(randomMode){
+            setColor(generateRandomHex());
+            codleNumber.textContent="Random";
+        } else {
+            setColor(generateDailyHex());
+        }
+        afterguessresult.textContent="";
+    });
+
+    setColor(generateDailyHex());
+
+    // ---------- ANIMATIONS ----------
+    function clearTimers(){ clearInterval(animationTimer); clearTimeout(blinkTimer); clearInterval(eyeHoverTimer); }
+
+    function startIdle(){
+        clearTimers(); state="idle"; frameIndex=0;
+        animationTimer=setInterval(()=>{
+            character.src=idleFrames[frameIndex];
+            frameIndex=(frameIndex+1)%idleFrames.length;
+        },1000);
+        blinkTimer=setTimeout(()=>{ if(state==="idle") playBlink(startIdle); },60000);
+    }
+
+    function playBlink(callback){
+        clearTimers(); state="blink"; frameIndex=0;
+        animationTimer=setInterval(()=>{
+            if(frameIndex>=blinkFrames.length){ clearInterval(animationTimer); callback?.(); }
+            else { character.src=blinkFrames[frameIndex]; frameIndex++; }
+        },300);
+    }
+
+    function playReaction(type){
+        const reaction=reactions[type]; if(!reaction) return;
+        clearTimers(); state="reaction"; frameIndex=0; let dir=1;
+        animationTimer=setInterval(()=>{
+            character.src=reaction.frames[frameIndex];
+            if(frameIndex<4){ frameIndex++; return; }
+            frameIndex+=dir;
+            if(frameIndex>=reaction.loopEnd || frameIndex<=reaction.loopStart) dir*=-1;
+        },300);
+        setTimeout(()=>{ playBlink(startIdle); },3000);
+    }
+
+    window.reactToScore=function(score){
+        if(score>=90) playReaction("ca2t");
+        else if(score>50) playReaction("thumb");
+        else playReaction("cry");
+    };
+
+    startIdle();
+
+    // ---------- EYE MOVEMENT ----------
+    colordisplay.addEventListener('mousemove', (e)=>{
+        const rect = colordisplay.getBoundingClientRect();
+        const centerX = rect.width/2;
+        const centerY = rect.height/2;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const maxMove = 2; // small movement
+        const offsetX = (x - centerX)/centerX*maxMove;
+        const offsetY = (y - centerY)/centerY*maxMove;
+        baseEye.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    });
+
+    colordisplay.addEventListener('mouseenter', ()=>{
+        hoverEye.style.display="block";
+        let eIndex=0; clearInterval(eyeHoverTimer);
+        eyeHoverTimer=setInterval(()=>{
+            hoverEye.src = eyeHoverFrames[eIndex];
+            eIndex++;
+            if(eIndex>=eyeHoverFrames.length) eIndex=3; // loop 4-8
+        },150);
+    });
+
+    colordisplay.addEventListener('mouseleave', ()=>{
+        hoverEye.style.display="none";
+        clearInterval(eyeHoverTimer);
+    });
+
+});
+/* ------------- LOCALSTORAGE ------------- */
+function todayKey(date = new Date()) {
+    return `hjf_${date.getFullYear()}${String(date.getMonth()+1).padStart(2,"0")}${String(date.getDate()).padStart(2,"0")}`;
+}
+const HISTORY_KEY = "hjf_history_v2";
+
+function saveDailyResult(score, guess, hex, date = new Date()) {
+    const key = todayKey(date);
+    const data = { score, guess, hex, timestamp: Date.now(), number: getHexcodleNumber(date) };
+    try { localStorage.setItem(key, JSON.stringify(data)); } catch(e){}
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        const exists = arr.findIndex(e => e.dateKey === key);
+        if (exists >= 0) arr[exists] = {...data, dateKey: key};
+        else arr.push({...data, dateKey: key});
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
+    } catch(e){}
+}
+
+
+function getDailyResult(date = new Date()) {
+    const key = todayKey(date);
+    try { return JSON.parse(localStorage.getItem(key)); } catch(e){ return null; }
+}
+
+function getHistory() {
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+}

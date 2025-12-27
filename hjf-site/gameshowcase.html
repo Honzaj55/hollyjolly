@@ -1,0 +1,51 @@
+* { box-sizing: border-box; font-family: Arial, sans-serif; }
+body { margin:0; min-height:100vh; background:#111; color:#eee; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+#container { background:#1b1b1b; padding:32px; border-radius:16px; width:520px; display:flex; flex-direction:column; align-items:center; gap:16px; box-shadow:0 10px 40px rgba(0,0,0,0.6); }
+h1 { margin:0; font-size:1.8rem; text-align:center; }
+#gameDisplay { position:relative; display:inline-block; }
+
+#colordisplay { width:340px; height:340px; border-radius:12px; border:2px solid #444; background-color:#000; position:relative; cursor:pointer; }
+
+/* Base Eye behind character */
+#baseEye {
+    position: absolute;
+    width: 310px;
+    height: 310px;
+    bottom: -115px;
+    right: -115px;
+    pointer-events: none;
+    z-index: 1; 
+}
+
+/* Hover glimmer overlay */
+#hoverEye {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    bottom: -80px;
+    right: -78px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+/* Character on top */
+#character {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 180px;
+    height: 180px;
+    pointer-events: none;
+    z-index: 2;
+}
+
+#inputRow { display:flex; gap:8px; }
+input[type="text"] { width:220px; padding:8px 12px; text-align:center; font-size:1.1rem; background:#111; color:#fff; border:1px solid #555; border-radius:8px; outline:none; text-transform:uppercase; }
+input[type="text"]:focus { border-color:#aaa; }
+
+button { background:#333; color:#fff; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:1rem; }
+button:hover { background:#444; } button:active { background:#555; }
+
+#afterguessresult, #codleNumber { margin-top:6px; font-weight:bold; font-size:1.1rem; }
+#navigation { margin-top:16px; display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
